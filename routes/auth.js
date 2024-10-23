@@ -1,6 +1,6 @@
 const express = require('express');
-const passport = require('passport');
 const router = express.Router();
+const passport = require('passport');
 
 const GoogleStrategy = require('passport-google-oidc');
 
@@ -15,16 +15,41 @@ passport.use(
       scope: ['openid', 'profile', 'email'],
     },
     async function verify(issuer, profile, cb) {
-      console.log(profile);
+      const existingUser = await User.findOne(
+        {
+          issuer,
+          id: profile.id,
+        },
+        '-_id id email'
+      );
 
-      return cb(null, { id: 'template' });
+      if (!existingUser) {
+        const newUser = new User({
+          issuer,
+          id: profile.id,
+          email: profile.emails[0].value,
+        });
+
+        await newUser.save();
+
+        return cb(null, {
+          id: newUser.id,
+          email: newUser.email,
+        });
+      }
+
+      return cb(null, {
+        id: existingUser.id,
+        email: existingUser.email,
+      });
     }
   )
 );
 
 passport.serializeUser(function (user, cb) {
   process.nextTick(function () {
-    cb(null, { id: user.id, username: user.username, name: user.name });
+    cb(null, { id: user.id, email: user.email });
+    // cb(null, { id: user.id, username: user.username, name: user.name });
   });
 });
 
@@ -39,7 +64,7 @@ router.get('/login/federated/google', passport.authenticate('google'));
 router.get(
   '/oauth2/redirect/google',
   passport.authenticate('google', {
-    successRedirect: '/',
+    successRedirect: 'http://localhost:3001',
     failureRedirect: '/login',
   })
 );
@@ -51,9 +76,9 @@ router.get('/logout', (req, res) => {
 });
 
 router.get('/user', (req, res) => {
-  console.log(req.user);
+  console.log('user: ', req.user);
 
-  res.send(req.user);
+  res.json({ message: 'user' });
 });
 
 module.exports = router;
