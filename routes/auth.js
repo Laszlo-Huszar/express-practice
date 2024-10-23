@@ -4,16 +4,20 @@ const router = express.Router();
 
 const GoogleStrategy = require('passport-google-oidc');
 
+const User = require('../models/user');
+
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env['GOOGLE_CLIENT_ID'],
       clientSecret: process.env['GOOGLE_CLIENT_SECRET'],
       callbackURL: '/oauth2/redirect/google',
-      scope: ['profile'],
+      scope: ['openid', 'profile', 'email'],
     },
-    function verify(issuer, profile, cb) {
-      return cb(null, { id: 'sdsdsdf', name: 'proba user' });
+    async function verify(issuer, profile, cb) {
+      console.log(profile);
+
+      return cb(null, { id: 'template' });
     }
   )
 );
@@ -40,14 +44,16 @@ router.get(
   })
 );
 
-router.get('/user', (req, res) => {
-  res.send(req.user);
-});
-
 router.get('/logout', (req, res) => {
   req.logout(() => {
     res.send('logout');
   });
+});
+
+router.get('/user', (req, res) => {
+  console.log(req.user);
+
+  res.send(req.user);
 });
 
 module.exports = router;
